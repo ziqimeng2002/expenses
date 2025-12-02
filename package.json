@@ -1,0 +1,19 @@
+{
+  "name": "expenses-api",
+  "version": "1.0.0",
+  "description": "A simple serverless API for managing expenses",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "vercel",
+    "serverless",
+    "api",
+    "expenses"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {}
+}
