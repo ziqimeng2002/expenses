@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serverless Expense Tracker Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for better aesthetics */
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #6366f1;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+        }
+        .container {
+            max-width: 900px;
+        }
+        button {
+            transition: all 0.2s ease-in-out;
+        }
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .card {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+        .error {
+            background-color: var(--error-color);
+            color: white;
+        }
+        .success {
+            background-color: var(--success-color);
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 font-sans antialiased">
+
+    <div class="container mx-auto space-y-8">
+        <header class="text-center py-6 bg-white rounded-xl shadow-lg">
+            <h1 class="text-3xl font-bold text-gray-800">Expense Tracker API Tester</h1>
+            <p class="text-sm text-gray-500 mt-1">Test your serverless Vercel endpoints (Remember: data is non-persistent!)</p>
+        </header>
+
+        <!-- API Endpoint Configuration -->
+        <div class="card bg-white p-6 rounded-xl">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">1. API Configuration</h2>
+            <label for="apiUrl" class="block text-sm font-medium text-gray-700">API Base URL (e.g., https://[your-app-name].vercel.app)</label>
+            <input type="url" id="apiUrl" value="/api/expenses" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="https://your-deployment.vercel.app/api/expenses">
+        </div>
+
+        <!-- POST Expense Section -->
+        <div class="grid md:grid-cols-2 gap-8">
+            <div class="card bg-white p-6 rounded-xl space-y-4">
+                <h2 class="text-xl font-semibold text-indigo-600 border-b pb-2 mb-4">2. POST New Expense</h2>
+                
+                <div class="flex flex-col space-y-2">
+                    <label for="postAmount" class="text-sm font-medium text-gray-700">Amount ($)</label>
+                    <input type="number" id="postAmount" value="45.50" step="0.01" class="border border-gray-300 rounded-md p-2" required>
+                </div>
+                
+                <div class="flex flex-col space-y-2">
+                    <label for="postDescription" class="text-sm font-medium text-gray-700">Description</label>
+                    <input type="text" id="postDescription" value="Weekly Groceries" class="border border-gray-300 rounded-md p-2" required>
+                </div>
+                
+                <div class="flex flex-col space-y-2">
+                    <label for="postCategory" class="text-sm font-medium text-gray-700">Category</label>
+                    <select id="postCategory" class="border border-gray-300 rounded-md p-2">
+                        <option value="Food">Food</option>
+                        <option value="Transport">Transport</option>
+                        <option value="Utilities">Utilities</option>
+                        <option value="Entertainment">Entertainment</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col space-y-2">
+                    <label for="postDate" class="text-sm font-medium text-gray-700">Date</label>
+                    <input type="date" id="postDate" value="2025-12-04" class="border border-gray-300 rounded-md p-2" required>
+                </div>
+                
+                <button onclick="postExpense()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50">
+                    Submit POST Request
+                </button>
+            </div>
+
+            <!-- GET Expenses Section -->
+            <div class="card bg-white p-6 rounded-xl space-y-4">
+                <h2 class="text-xl font-semibold text-purple-600 border-b pb-2 mb-4">3. GET All Expenses</h2>
+                
+                <button onclick="getExpenses()" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50">
+                    Fetch GET Request
+                </button>
+
+                <div class="pt-4">
+                    <h3 class="font-semibold text-gray-700 mb-2">Response:</h3>
+                    <pre id="getResponse" class="bg-gray-50 border border-gray-200 p-3 rounded-md overflow-x-auto text-sm h-64 whitespace-pre-wrap"></pre>
+                    <p class="text-xs text-gray-500 mt-2 italic">Remember to POST first, or the array will be empty!</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Messages Section -->
+        <div id="messageBox" class="p-4 rounded-lg text-center font-medium hidden"></div>
+
+    </div>
+
+    <script>
+        const messageBox = document.getElementById('messageBox');
+        const apiBaseUrlInput = document.getElementById('apiUrl');
+        
+        /**
+         * Shows a status message (success or error).
+         * @param {string} message 
+         * @param {boolean} isError 
+         */
+        function showMessage(message, isError) {
+            messageBox.textContent = message;
+            messageBox.classList.remove('hidden', 'success', 'error');
+            if (isError) {
+                messageBox.classList.add('error');
+            } else {
+                messageBox.classList.add('success');
+            }
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 5000);
+        }
+
+        /**
+         * Handles the POST request to add a new expense.
+         */
+        async function postExpense() {
+            const apiUrl = apiBaseUrlInput.value;
+            const amount = document.getElementById('postAmount').value;
+            const description = document.getElementById('postDescription').value;
+            const category = document.getElementById('postCategory').value;
+            const date = document.getElementById('postDate').value;
+            
+            const expenseData = {
+                amount: amount,
+                description: description,
+                category: category,
+                date: date
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(expenseData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage(`Success! Expense added (ID: ${result.data.id}). Check console for full response.`, false);
+                    console.log('POST Success:', result);
+                    // Automatically fetch expenses after posting
+                    getExpenses(); 
+                } else {
+                    showMessage(`Error (${response.status}): ${result.error}`, true);
+                    console.error('POST Error:', result);
+                }
+
+            } catch (error) {
+                showMessage(`Network or JSON Error: ${error.message}`, true);
+                console.error('Fetch Error:', error);
+            }
+        }
+
+        /**
+         * Handles the GET request to retrieve all expenses.
+         */
+        async function getExpenses() {
+            const apiUrl = apiBaseUrlInput.value;
+            const getResponseElement = document.getElementById('getResponse');
+            getResponseElement.textContent = "Loading...";
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'GET'
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    getResponseElement.textContent = JSON.stringify(result, null, 2);
+                    showMessage(`Successfully fetched ${result.count} expenses.`, false);
+                } else {
+                    getResponseElement.textContent = JSON.stringify(result, null, 2);
+                    showMessage(`Error (${response.status}): Could not fetch expenses.`, true);
+                    console.error('GET Error:', result);
+                }
+
+            } catch (error) {
+                getResponseElement.textContent = `Error: ${error.message}`;
+                showMessage(`Network Error: ${error.message}`, true);
+                console.error('Fetch Error:', error);
+            }
+        }
+
+        // Set today's date on load for convenience
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('postDate').value = today;
+            // Set the API URL for local testing before deployment
+            apiBaseUrlInput.value = window.location.origin === 'null' ? '/api/expenses' : `${window.location.origin}/api/expenses`;
+        });
+    </script>
+</body>
+</html>
