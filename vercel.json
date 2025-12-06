@@ -11,7 +11,5 @@
       "src": "/api/expenses",
       "dest": "/api/expenses.js"
     }
-    // 删除了根路径 / 到 /index.html 的路由配置。
-    // 让 Vercel 自动处理根路径的静态文件。
   ]
 }
